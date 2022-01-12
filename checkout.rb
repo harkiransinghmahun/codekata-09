@@ -13,57 +13,74 @@ end
 
 class PricePolicy
 
-  def initialize(starts_at, *discounts)
+  def initialize(starts_at, if_discount, discount)
     @starts_at = starts_at
-    @discounts = discounts
+    @if_discount = if_discount
+
+    if @if_discount
+      @discount = discount
+    end
+  
   end
 
   def price_for(quantity)
-    quantity * @starts_at - discount_for(quantity)
+    if @if_discount == false
+      return quantity * @starts_at
+    end
+
+    return quantity * @starts_at - @discount.calculate_for(quantity)
   end
 
-  def discount_for(quantity)
-    @discounts.inject(0) do |mem, discount|
-      mem + discount.calculate_for(quantity)
-    end
-  end
 end
 
 RULES = {
-  'A' => PricePolicy.new(50, Discount.new(20, 3)),
-  'B' => PricePolicy.new(30, Discount.new(15, 2)),
-  'C' => PricePolicy.new(20),
-  'D' => PricePolicy.new(15),
+  'A' => PricePolicy.new(50, true, Discount.new(20, 3)),
+  'B' => PricePolicy.new(30, true, Discount.new(15, 2)),
+  'C' => PricePolicy.new(20, false, nil),
+  'D' => PricePolicy.new(15, false, nil),
 }
 
 class CheckOut
 
-  def initialize(rules)
-    @rules = rules
-    @items = Hash.new
-  end
-
-  def scan(item)
-    @items[item] ||= 0
-    @items[item] += 1
-  end
-
-  def total
-    @items.inject(0) do |mem, (item, quantity)|
-      mem + price_for(item, quantity)
+    def initialize(rules)
+      # Rules is a hash like object
+      @rules = rules
+      @items = {}
+      # assign all the rules
+      assign_rules()
     end
-  end
 
-  private
-  def price_for(item, quantity)
-    if rule_for(item)
-      rule_for(item).price_for(quantity)
-    else
-      raise "Invalid item '#{item}'"
+
+    def scan(item)
+      if (@items.include?(item))
+        @items[item] += 1
+      else 
+        @items[item] = 1
+      end
     end
-  end
 
-  def rule_for(item)
-    @rules[item]
-  end
+
+    def total()
+      total_price = 0
+
+      for (item, quantity) in @items
+        total_price += get_price(item, quantity)
+      end
+
+      return total_price
+    end 
+
+
+    def get_price(item, quantity)
+      return @rules[item].price_for(quantity)
+    end
+
+
+    def assign_rules()
+      for item in @rules
+        @rules[item]
+      end 
+    end
 end
+
+
