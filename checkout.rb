@@ -13,31 +13,33 @@ end
 
 class PricePolicy
 
-  def initialize(starts_at, if_discount, discount)
+  def initialize(starts_at, *discounts)
     @starts_at = starts_at
-    @if_discount = if_discount
-
-    if @if_discount
-      @discount = discount
-    end
-  
+    @discounts = discounts
+ 
   end
 
   def price_for(quantity)
-    if @if_discount == false
-      return quantity * @starts_at
-    end
-
-    return quantity * @starts_at - @discount.calculate_for(quantity)
+    quantity * @starts_at - get_discount(quantity)
   end
+
+  def get_discount(quantity)
+    total_discounts = 0
+    @discounts.each do |discount|
+      total_discounts += discount.calculate_for(quantity)
+    end 
+
+    return total_discounts
+  end
+
 
 end
 
 RULES = {
-  'A' => PricePolicy.new(50, true, Discount.new(20, 3)),
-  'B' => PricePolicy.new(30, true, Discount.new(15, 2)),
-  'C' => PricePolicy.new(20, false, nil),
-  'D' => PricePolicy.new(15, false, nil),
+  'A' => PricePolicy.new(50, Discount.new(20, 3)),
+  'B' => PricePolicy.new(30, Discount.new(15, 2)),
+  'C' => PricePolicy.new(20),
+  'D' => PricePolicy.new(15),
 }
 
 class CheckOut
@@ -82,5 +84,3 @@ class CheckOut
       end 
     end
 end
-
-
